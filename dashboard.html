@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JARVIS — Agency Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e14;--panel:#111722;--panel2:#0d131c;--line:#1e2735;--txt:#e6edf3;--muted:#7d8998;--accent:#38bdf8;--ok:#34d399;--warn:#fbbf24}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;
+  background-image:radial-gradient(circle at 20% 0%,rgba(56,189,248,.06),transparent 40%),radial-gradient(circle at 90% 100%,rgba(52,211,153,.05),transparent 40%)}
+.app{display:grid;grid-template-columns:270px 1fr 1fr;height:100vh}
+.col{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.col:last-child{border-right:none}
+.hd{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.hd h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600}
+.brand{display:flex;align-items:center;gap:11px;padding:18px;border-bottom:1px solid var(--line)}
+.orb{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#7dd3fc,#0284c7 60%,#0c4a6e);box-shadow:0 0 22px rgba(56,189,248,.55);animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 18px rgba(56,189,248,.45)}50%{box-shadow:0 0 30px rgba(56,189,248,.75)}}
+.brand b{font-size:1.15rem;letter-spacing:.04em}
+.brand small{display:block;color:var(--muted);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase}
+.agents{padding:12px;overflow-y:auto;flex:1}
+.agent{display:flex;gap:12px;padding:12px;border-radius:12px;margin-bottom:6px;transition:background .15s}
+.agent:hover{background:var(--panel)}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex-shrink:0}
+.agent .nm{font-weight:600;font-size:.92rem}
+.agent .rl{color:var(--muted);font-size:.75rem;margin-top:1px}
+.agent .st{margin-left:auto;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding-top:3px}
+.foot{padding:14px 18px;border-top:1px solid var(--line);font-size:.72rem;color:var(--muted)}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.68rem;font-weight:600}
+.badge.on{background:rgba(52,211,153,.15);color:var(--ok)}
+.badge.off{background:rgba(251,191,36,.15);color:var(--warn)}
+.stream{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:88%;padding:12px 15px;border-radius:14px;font-size:.92rem;line-height:1.5;animation:rise .25s ease;white-space:pre-wrap}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.msg .who{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;font-weight:700}
+.msg.you{align-self:flex-end;background:var(--accent);color:#04121e}
+.msg.you .who{color:#04121e;opacity:.7}
+.msg.ag{align-self:flex-start;background:var(--panel);border:1px solid var(--line)}
+.composer{padding:16px;border-top:1px solid var(--line);display:flex;gap:10px}
+.composer input{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:13px 15px;font-size:.95rem;font-family:inherit;outline:none}
+.composer input:focus{border-color:var(--accent)}
+.composer button{background:var(--accent);color:#04121e;border:none;border-radius:12px;padding:0 20px;font-weight:700;cursor:pointer;font-size:.95rem}
+.hint{padding:0 16px 12px;color:var(--muted);font-size:.74rem}
+.chip{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;margin:3px 4px 0 0;font-size:.78rem;cursor:pointer;color:var(--txt)}
+.chip:hover{border-color:var(--accent)}
+.tasks{flex:1;overflow-y:auto;padding:14px}
+.task{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:9px;animation:rise .25s ease}
+.task .row{display:flex;align-items:center;gap:8px}
+.task .ag{font-weight:600;font-size:.85rem}
+.task .ins{color:var(--muted);font-size:.82rem;margin-top:5px;line-height:1.45}
+.task .res{color:var(--ok);font-size:.8rem;margin-top:7px;white-space:pre-wrap}
+.stat{margin-left:auto;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:4px 9px;border-radius:999px}
+.stat.recebida{background:rgba(125,137,152,.18);color:var(--muted)}
+.stat.em_andamento{background:rgba(56,189,248,.16);color:var(--accent)}
+.stat.concluida{background:rgba(52,211,153,.16);color:var(--ok)}
+.stat.aguardando_aprovacao{background:rgba(251,191,36,.16);color:var(--warn)}
+.stat.erro{background:rgba(248,113,113,.18);color:#f87171}
+.approve{margin-top:9px;background:var(--warn);color:#241a00;border:none;border-radius:8px;padding:7px 14px;font-weight:700;cursor:pointer;font-size:.78rem}
+.spin{width:11px;height:11px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.preview{border-top:1px solid var(--line);height:44%;display:flex;flex-direction:column}
+.preview .hd .slug{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent)}
+.frame{flex:1;background:#000;position:relative;overflow:hidden}
+.frame iframe{position:absolute;top:0;left:0;width:167%;height:167%;transform:scale(.6);transform-origin:top left;border:none;background:#fff}
+.empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.85rem;text-align:center;padding:20px}
+.editbar{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.editbar input{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:9px 12px;font-size:.85rem;outline:none;font-family:inherit}
+.editbar button{background:var(--ok);color:#04140c;border:none;border-radius:9px;padding:0 14px;font-weight:700;cursor:pointer;font-size:.85rem}
+::-webkit-scrollbar{width:9px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:9px}
+</style></head>
+<body>
+<div class="app">
+  <div class="col">
+    <div class="brand"><div class="orb"></div><div><b>JARVIS</b><small>Agency Control</small></div></div>
+    <div class="hd"><h2>Team</h2></div>
+    <div class="agents" id="agents">
+      {% for key, a in agents.items() %}
+      <div class="agent">
+        <span class="dot" style="background:{{ a.accent }};box-shadow:0 0 10px {{ a.accent }}"></span>
+        <div><div class="nm" style="color:{{ a.accent }}">{{ a.name }}</div><div class="rl">{{ a.role }}</div></div>
+        <span class="st">{{ a.status }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="foot">
+      AI engine:
+      {% if ai_enabled %}<span class="badge on">Claude live</span>
+      {% else %}<span class="badge off">demo mode</span> — add ANTHROPIC_API_KEY{% endif %}
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="hd"><h2>Talk to the Manager</h2></div>
+    <div class="stream" id="stream"></div>
+    <div class="hint" id="chips">
+      Try:
+      <span class="chip">Build a site for Padaria Estrela da Mooca, an artisan bakery in Mooca, WhatsApp 11 91234-5678</span>
+      <span class="chip">Make a site for Studio Bella, a beauty studio in Pinheiros, WhatsApp 11 98888-7777</span>
+      <span class="chip">What's the status today?</span>
+    </div>
+    <div class="composer">
+      <input id="say" placeholder="Talk to the Manager… (e.g. 'build a site for…')" autocomplete="off">
+      <button onclick="send()">Send</button>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="hd"><h2>Task board</h2><span id="proj-count" class="st"></span></div>
+    <div class="tasks" id="tasks"></div>
+    <div class="preview">
+      <div class="hd"><h2>Site in production</h2><span class="slug" id="slug"></span></div>
+      <div class="frame" id="frame"><div class="empty" id="empty">No site yet. Ask the Manager to build one and it appears here.</div></div>
+      <div class="editbar">
+        <input id="edit" placeholder="Tweak the current site (e.g. 'make it blue and add Sunday hours')">
+        <button onclick="applyEdit()">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentSlug = null;
+const AG = {{ agents|tojson }};
+const STATUS = {recebida:'received', em_andamento:'in progress', concluida:'done',
+                aguardando_aprovacao:'needs approval', erro:'error'};
+function agentName(k){ return (AG[k]&&AG[k].name) || (k==='you'?'You':k); }
+function agentColor(k){ return (AG[k]&&AG[k].accent) || '#38bdf8'; }
+
+async function refresh(){
+  const s = await (await fetch('/api/state')).json();
+  const stream = document.getElementById('stream');
+  const atBottom = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60;
+  stream.innerHTML = s.messages.map(m=>{
+    const mine = m.author==='you'; const col = agentColor(m.author);
+    return `<div class="msg ${mine?'you':'ag'}"><div class="who" ${mine?'':`style="color:${col}"`}>${agentName(m.author)}</div>${escapeHtml(m.text)}</div>`;
+  }).join('');
+  if(atBottom) stream.scrollTop = stream.scrollHeight;
+
+  document.getElementById('tasks').innerHTML = s.tasks.map(t=>{
+    const spin = t.status==='em_andamento' ? '<span class="spin"></span> ' : '';
+    const label = STATUS[t.status]||t.status;
+    const approve = t.status==='aguardando_aprovacao'
+      ? `<button class="approve" onclick="approve(${t.id})">Approve</button>` : '';
+    return `<div class="task"><div class="row"><span class="ag" style="color:${agentColor(t.agent)}">${agentName(t.agent)}</span>
+      <span class="stat ${t.status}">${spin}${label}</span></div>
+      <div class="ins">${escapeHtml(t.instruction)}</div>
+      ${t.result?`<div class="res">${escapeHtml(t.result)}</div>`:''}${approve}</div>`;
+  }).join('') || '<div class="empty">Delegated tasks show up here.</div>';
+  document.getElementById('proj-count').textContent = s.projects.length ? s.projects.length+' project(s)' : '';
+
+  const ready = s.projects.find(p=>p.status==='pronto'||p.status==='publicado');
+  if(ready && ready.slug!==currentSlug){
+    currentSlug = ready.slug;
+    document.getElementById('slug').textContent = '/s/'+ready.slug;
+    document.getElementById('frame').innerHTML = `<iframe src="/s/${ready.slug}?t=${Date.now()}"></iframe>`;
+  } else if(ready){
+    const f=document.querySelector('#frame iframe'); if(f && !f.src.includes(ready.slug)) f.src='/s/'+ready.slug+'?t='+Date.now();
+  }
+}
+function escapeHtml(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+async function send(){
+  const i=document.getElementById('say'); const t=i.value.trim(); if(!t)return;
+  i.value=''; const fd=new FormData(); fd.append('text',t);
+  await fetch('/api/say',{method:'POST',body:fd}); refresh();
+}
+async function applyEdit(){
+  if(!currentSlug)return;
+  const i=document.getElementById('edit'); const t=i.value.trim(); if(!t)return;
+  i.value=''; const fd=new FormData(); fd.append('slug',currentSlug); fd.append('instruction',t);
+  await fetch('/api/edit',{method:'POST',body:fd}); refresh();
+}
+async function approve(id){
+  const fd=new FormData(); fd.append('task_id',id);
+  await fetch('/api/approve',{method:'POST',body:fd}); refresh();
+}
+document.getElementById('say').addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+document.getElementById('edit').addEventListener('keydown',e=>{if(e.key==='Enter')applyEdit();});
+document.getElementById('chips').addEventListener('click',e=>{
+  if(e.target.classList.contains('chip')){document.getElementById('say').value=e.target.textContent.trim();}
+});
+refresh(); setInterval(refresh, 1500);
+</script>
+</body></html>
