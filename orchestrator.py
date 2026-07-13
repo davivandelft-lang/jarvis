@@ -9,6 +9,20 @@ import threading
 import db, agents
 
 
+def _build_context(conn, limit: int = 14) -> str:
+    """Recent conversation, oldest→newest, for the Manager's memory.
+    Excludes the most recent 'you' message (passed separately as the new turn)."""
+    rows = conn.execute(
+        "SELECT author, text FROM messages ORDER BY id DESC LIMIT ?", (limit + 1,)
+    ).fetchall()
+    rows = list(reversed(rows))[:-1]  # drop the current (latest) message
+    lines = []
+    for r in rows:
+        who = "You" if r["author"] == "you" else agents.NAMES.get(r["author"], r["author"].title())
+        lines.append(f"{who}: {r['text']}")
+    return "\n".join(lines)
+
+
 def handle_user_message(text: str):
     conn = db.connect()
     try:
@@ -21,7 +35,8 @@ def handle_user_message(text: str):
 def _run(text: str):
     conn = db.connect()
     try:
-        plan = agents.manager_plan(text)
+        context = _build_context(conn)
+        plan = agents.manager_plan(text, context=context)
         db.add_message(conn, "manager", plan.get("reply", "On it."))
         tasks = plan.get("tasks", [])
         if not tasks:

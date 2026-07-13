@@ -21,25 +21,28 @@ HAS_KEY = bool(os.environ.get("ANTHROPIC_API_KEY"))
 # Agent roster — shown on the dashboard.
 # ---------------------------------------------------------------------------
 AGENTS = {
-    "manager": {"name": "Manager", "role": "Chief of staff (JARVIS)",
-                "blurb": "Takes your orders, plans, and delegates to the team.",
-                "accent": "#38bdf8", "status": "online"},
-    "dev": {"name": "Dev", "role": "Coding agent",
+    "manager": {"name": "Nova", "role": "Chief of Staff",
+                "blurb": "Takes your orders, plans the work, and runs the team.",
+                "accent": "#38bdf8", "status": "online", "emoji": "✦"},
+    "dev": {"name": "Forge", "role": "Build Agent",
             "blurb": "Builds and edits the client websites.",
-            "accent": "#34d399", "status": "online"},
-    "design": {"name": "Design", "role": "Design agent",
+            "accent": "#34d399", "status": "online", "emoji": "⬢"},
+    "design": {"name": "Iris", "role": "Design Agent",
                "blurb": "Sets palette, type and visual direction.",
-               "accent": "#f472b6", "status": "online"},
-    "marketing": {"name": "Marketing", "role": "Marketing agent",
-                  "blurb": "SEO copy and social posts for each site.",
-                  "accent": "#fbbf24", "status": "online"},
-    "email": {"name": "Email", "role": "Email agent",
-              "blurb": "Drafts client messages. Waits for your approval.",
-              "accent": "#a78bfa", "status": "online"},
-    "security": {"name": "Security", "role": "Security / ops agent",
+               "accent": "#f472b6", "status": "online", "emoji": "◈"},
+    "marketing": {"name": "Echo", "role": "Growth Agent",
+                  "blurb": "SEO copy and social posts for every site.",
+                  "accent": "#fbbf24", "status": "online", "emoji": "◎"},
+    "email": {"name": "Quill", "role": "Comms Agent",
+              "blurb": "Drafts client messages — waits for your approval.",
+              "accent": "#a78bfa", "status": "online", "emoji": "✎"},
+    "security": {"name": "Scout", "role": "Security & Ops",
                  "blurb": "Watches uptime, spend and backups.",
-                 "accent": "#fb7185", "status": "online"},
+                 "accent": "#fb7185", "status": "online", "emoji": "◭"},
 }
+
+# Human-facing names for use inside agent replies/prompts.
+NAMES = {k: v["name"] for k, v in AGENTS.items()}
 
 
 def _client():
@@ -60,24 +63,26 @@ def _extract_json(text: str) -> dict:
 # ---------------------------------------------------------------------------
 # MANAGER — turns your request into an English reply + a delegation plan.
 # ---------------------------------------------------------------------------
-MANAGER_SYSTEM = """You are the Manager, the lead agent of an automated web agency \
-(JARVIS-style). The owner talks to you in ENGLISH; always reply in ENGLISH, short, \
-confident and human — like a sharp chief of staff. Your job:
-1. Understand the request.
-2. Reply briefly.
+MANAGER_SYSTEM = """You are Nova, the Chief of Staff of an automated web agency. The \
+owner talks to you in ENGLISH; always reply in ENGLISH — short, confident, warm and \
+human, like a sharp right-hand who remembers everything. You are given the recent \
+conversation so far; USE IT (remember names, past projects, and what the owner already \
+told you — don't ask for things already said). Your job:
+1. Understand the request in context.
+2. Reply briefly, referring to your teammates by name where natural.
 3. Create a delegation plan for the right agents.
 
-Agents you can delegate to:
-- "design": sets visual direction (palette/style). Use before dev on a new site.
-- "dev": builds or edits the actual website (the client site is in Portuguese).
-- "marketing": writes SEO metadata + social captions for a finished site.
-- "email": drafts a message to the client (ALWAYS needs the owner's approval).
-- "security": runs a quick ops/status/cost check.
+Your team (delegate using the KEY on the left):
+- "design" = Iris, sets visual direction (palette/style). Use before dev on a new site.
+- "dev" = Forge, builds or edits the actual website (client site is in Portuguese).
+- "marketing" = Echo, writes SEO metadata + social captions for a finished site.
+- "email" = Quill, drafts a message to the client (ALWAYS needs the owner's approval).
+- "security" = Scout, runs a quick ops/status/cost check.
 
 Respond ONLY with valid JSON:
 {
   "reply": "your short English reply to the owner",
-  "project_name": "client/project name if a new site, else null",
+  "project_name": "client/project name if a NEW site, else null",
   "tasks": [
     {"agent": "design", "instruction": "..."},
     {"agent": "dev", "instruction": "full business details for the Portuguese site"},
@@ -85,15 +90,16 @@ Respond ONLY with valid JSON:
     {"agent": "email", "instruction": "what to tell the client", "needs_approval": true}
   ]
 }
-If the request needs no work (just a question), return tasks: []."""
+If it's just a question or chat, return tasks: [] and answer in "reply"."""
 
 
 def manager_plan(user_message: str, context: str = "") -> dict:
     if HAS_KEY:
         try:
+            history = f"Recent conversation:\n{context}\n\n" if context else ""
             resp = _client().messages.create(
                 model=MANAGER_MODEL, max_tokens=1500, system=MANAGER_SYSTEM,
-                messages=[{"role": "user", "content": f"{context}\n\nRequest: {user_message}"}])
+                messages=[{"role": "user", "content": f"{history}Owner's new message: {user_message}"}])
             plan = _extract_json(resp.content[0].text)
             plan.setdefault("tasks", [])
             plan.setdefault("reply", "Understood. On it.")
@@ -111,10 +117,9 @@ def _manager_stub(user_message: str, note: str = "") -> dict:
     if any(w in msg for w in build_words):
         name = _extract_name(user_message)
         return {
-            "reply": f"On it. I'll get {name}'s site built — Design sets the look, Dev builds "
-                     f"it, Marketing preps the SEO and social copy, and Email will draft a "
-                     f"note to the client for your approval. I'll ping you when the first "
-                     f"version is live.",
+            "reply": f"On it. I'll get {name}'s site built — Iris sets the look, Forge builds "
+                     f"it, Echo preps the SEO and social copy, and Quill will draft a note to "
+                     f"the client for your approval. I'll ping you when the first version's live.",
             "project_name": name,
             "tasks": [
                 {"agent": "design", "instruction": f"Visual direction for: {user_message}"},
@@ -126,7 +131,7 @@ def _manager_stub(user_message: str, note: str = "") -> dict:
             "_note": note,
         }
     if any(w in msg for w in status_words):
-        return {"reply": "Let me have Security pull the current status.", "project_name": None,
+        return {"reply": "Let me have Scout pull the current status.", "project_name": None,
                 "tasks": [{"agent": "security", "instruction": "status and cost check"}], "_note": note}
     return {"reply": "Got it. Tell me which site you want the team to build and I'll delegate it "
                      "right away.", "project_name": None, "tasks": [], "_note": note}

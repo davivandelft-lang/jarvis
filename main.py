@@ -23,7 +23,7 @@ _PASS = os.environ.get("JARVIS_PASSWORD")
 
 @app.middleware("http")
 async def basic_auth(request: Request, call_next):
-    if _PASS and not request.url.path.startswith("/s/"):
+    if _PASS and not request.url.path.startswith("/s/") and request.url.path != "/health":
         header = request.headers.get("authorization", "")
         ok = False
         if header.startswith("Basic "):
@@ -78,6 +78,23 @@ def api_edit(slug: str = Form(...), instruction: str = Form(...)):
 def api_approve(task_id: int = Form(...)):
     orchestrator.approve_task(task_id)
     return JSONResponse({"ok": True})
+
+
+@app.get("/api/project/{slug}")
+def api_project(slug: str):
+    conn = db.connect()
+    try:
+        p = conn.execute(
+            "SELECT id,name,slug,brief,status,created_at,updated_at,"
+            "(html IS NOT NULL) AS has_site FROM projects WHERE slug=?", (slug,)).fetchone()
+        if not p:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        tasks = [dict(r) for r in conn.execute(
+            "SELECT agent,instruction,status,result,updated_at FROM tasks "
+            "WHERE project_id=? ORDER BY id ASC", (p["id"],)).fetchall()]
+        return JSONResponse({"project": dict(p), "tasks": tasks})
+    finally:
+        conn.close()
 
 
 @app.get("/s/{slug}", response_class=HTMLResponse)
